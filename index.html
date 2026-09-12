@@ -25,8 +25,15 @@
             font-size: 0.85rem;
             color: #ffcc00;
             text-shadow: 2px 2px #d6249f;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-align: center;
+        }
+
+        .level-indicator {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            color: #ff4444;
+            margin-bottom: 6px;
         }
 
         .score-board {
@@ -104,7 +111,6 @@
             filter: drop-shadow(0 0 6px #00ffc8);
         }
 
-        /* Lienzo de Fuegos Artificiales */
         #fireworks-canvas {
             position: fixed;
             top: 0;
@@ -116,7 +122,6 @@
             display: none;
         }
 
-        /* Ventana Modal */
         #modal-overlay {
             position: fixed;
             top: 0;
@@ -207,7 +212,8 @@
     <canvas id="fireworks-canvas"></canvas>
 
     <h1>LABERINTO ARCADE</h1>
-    <div class="score-board">FRASES DESCUBIERTAS: <span id="score">0</span> / 10</div>
+    <div class="level-indicator">NIVEL <span id="current-level-num">1</span></div>
+    <div class="score-board">FRASES DESCUBIERTAS: <span id="score">0</span> / <span id="total-milestones">10</span></div>
 
     <div id="game-container">
         <div id="player">🧙‍♂️</div>
@@ -215,7 +221,6 @@
 
     <div class="controls-hint">↑ ↓ ← → / WASD para mover</div>
 
-    <!-- Ventana Modal -->
     <div id="modal-overlay">
         <div class="modal-box">
             <button class="close-btn" onclick="handleModalClose()">[ X ]</button>
@@ -226,55 +231,90 @@
     </div>
 
     <script>
-        const map = [
-            [1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,0,0,1],
-            [1,0,1,0,1,0,1,1,1,0,1],
-            [1,0,1,0,0,0,0,0,1,0,1],
-            [1,0,1,1,1,1,1,0,1,0,1],
-            [1,0,0,0,0,0,1,0,0,0,1],
-            [1,1,1,0,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,1,0,1],
-            [1,0,1,1,1,1,1,0,1,1,1],
-            [1,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1]
+        // Configuración de los niveles (Mapas, Frases y Velocidad de trampa)
+        const levels = [
+            {
+                // NIVEL 1
+                trapSpeed: 1200, // más lento
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,0,0,0,1],
+                    [1,0,1,0,1,0,1,1,1,0,1],
+                    [1,0,1,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,0,1,0,1],
+                    [1,0,0,0,0,0,1,0,0,0,1],
+                    [1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1]
+                ],
+                phrases: [
+                    "El tiempo no borra las huellas; las convierte en misterio.",
+                    "A veces, perderse es el único modo de encontrar el camino correcto.",
+                    "Las palabras que callamos construyen laberintos invisibles.",
+                    "En el fondo de la memoria, cada recuerdo arde como una pequeña hoguera.",
+                    "Un libro abierto es un mapa hacia universos que aún no han nacido.",
+                    "El eco de una frase antigua puede iluminar una noche entera.",
+                    "Tras cada puerta cerrada por el miedo se oculta una verdad por descubrir.",
+                    "Las sombras solo existen porque la luz se atreve a brillar.",
+                    "Caminamos sobre fragmentos de historias que otros dejaron atrás.",
+                    "El viaje del buscador nunca termina; solo cambia de pantalla."
+                ],
+                milestoneCoords: [
+                    {x: 9, y: 1}, {x: 9, y: 3}, {x: 5, y: 3}, {x: 1, y: 5}, {x: 9, y: 5},
+                    {x: 3, y: 7}, {x: 5, y: 7}, {x: 1, y: 9}, {x: 5, y: 9}, {x: 9, y: 7}
+                ]
+            },
+            {
+                // NIVEL 2 (Más complejo y con trampa más rápida)
+                trapSpeed: 850, // más rápido
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,1,0,0,0,1,0,0,0,1],
+                    [1,0,1,0,1,0,1,0,1,0,1],
+                    [1,0,0,0,1,0,0,0,1,0,1],
+                    [1,1,1,0,1,1,1,0,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,1,1,0,1,1,1,0,1],
+                    [1,0,1,0,0,0,0,0,1,0,1],
+                    [1,0,1,0,1,1,1,0,1,0,1],
+                    [1,0,0,0,1,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1]
+                ],
+                phrases: [
+                    "El laberinto interior se estrecha cuando la razón se duerme.",
+                    "Cada muro derribado en la mente libera un fragmento del alma.",
+                    "Las sombras acechan en las esquinas donde la duda se estanca.",
+                    "Buscar la salida es aceptar que el centro y el borde son lo mismo.",
+                    "Un destello de lucidez basta para despejar la niebla del camino.",
+                    "Los hilos del destino se tejen con elecciones invisibles.",
+                    "El silencio entre dos palabras guarda el secreto más profundo.",
+                    "Quien domina sus miedos cruza el umbral sin mirar atrás.",
+                    "La memoria es un espejo roto que refleja mil universos.",
+                    "El verdadero despertar ocurre cuando el laberinto se desvanece."
+                ],
+                milestoneCoords: [
+                    {x: 3, y: 1}, {x: 9, y: 1}, {x: 3, y: 3}, {x: 7, y: 3}, {x: 5, y: 5},
+                    {x: 1, y: 7}, {x: 7, y: 7}, {x: 3, y: 9}, {x: 7, y: 9}, {x: 9, y: 9}
+                ]
+            }
         ];
 
-        const phrases = [
-            "El tiempo no borra las huellas; las convierte en misterio.",
-            "A veces, perderse es el único modo de encontrar el camino correcto.",
-            "Las palabras que callamos construyen laberintos invisibles.",
-            "En el fondo de la memoria, cada recuerdo arde como una pequeña hoguera.",
-            "Un libro abierto es un mapa hacia universos que aún no han nacido.",
-            "El eco de una frase antigua puede iluminar una noche entera.",
-            "Tras cada puerta cerrada por el miedo se oculta una verdad por descubrir.",
-            "Las sombras solo existen porque la luz se atreve a brillar.",
-            "Caminamos sobre fragmentos de historias que otros dejaron atrás.",
-            "El viaje del buscador nunca termina; solo cambia de pantalla."
-        ];
-
+        let currentLevelIndex = 0;
         let playerPos = { x: 1, y: 1 };
         let trapPos = { x: 9, y: 9 };
         let isGamePaused = false;
         let levelCompleted = false;
-        
-        let milestones = [
-            { x: 9, y: 1, collected: false, text: phrases[0] },
-            { x: 9, y: 3, collected: false, text: phrases[1] },
-            { x: 5, y: 3, collected: false, text: phrases[2] },
-            { x: 1, y: 5, collected: false, text: phrases[3] },
-            { x: 9, y: 5, collected: false, text: phrases[4] },
-            { x: 3, y: 7, collected: false, text: phrases[5] },
-            { x: 5, y: 7, collected: false, text: phrases[6] },
-            { x: 1, y: 9, collected: false, text: phrases[7] },
-            { x: 5, y: 9, collected: false, text: phrases[8] },
-            { x: 9, y: 7, collected: false, text: phrases[9] }
-        ];
-
         let score = 0;
+        let milestones = [];
+        let trapInterval = null;
+
         const container = document.getElementById('game-container');
         const playerEl = document.getElementById('player');
         const scoreEl = document.getElementById('score');
+        const totalMilestonesEl = document.getElementById('total-milestones');
+        const currentLevelNumEl = document.getElementById('current-level-num');
         const modalOverlay = document.getElementById('modal-overlay');
         const modalMessage = document.getElementById('modal-message');
         const modalTitleHeader = document.getElementById('modal-title-header');
@@ -282,12 +322,34 @@
         const canvas = document.getElementById('fireworks-canvas');
         const ctx = canvas.getContext('2d');
 
-        function initGame() {
+        function loadLevel(index) {
+            currentLevelIndex = index;
+            const lvl = levels[currentLevelIndex];
+            
+            currentLevelNumEl.textContent = currentLevelIndex + 1;
+            score = 0;
+            scoreEl.textContent = score;
+            totalMilestonesEl.textContent = lvl.phrases.length;
+            
+            playerPos = { x: 1, y: 1 };
+            trapPos = { x: 9, y: 9 };
+            levelCompleted = false;
+
+            milestones = lvl.milestoneCoords.map((coord, i) => ({
+                x: coord.x,
+                y: coord.y,
+                collected: false,
+                text: lvl.phrases[i]
+            }));
+
             renderMap();
             updatePlayerPosition();
+            startTrapTimer();
         }
 
         function renderMap() {
+            const lvl = levels[currentLevelIndex];
+            const map = lvl.map;
             const cells = container.querySelectorAll('.cell');
             cells.forEach(c => c.remove());
 
@@ -331,6 +393,8 @@
         function movePlayer(dx, dy) {
             if (isGamePaused) return;
 
+            const lvl = levels[currentLevelIndex];
+            const map = lvl.map;
             const newX = playerPos.x + dx;
             const newY = playerPos.y + dy;
 
@@ -345,6 +409,8 @@
         }
 
         function checkCollisions() {
+            const lvl = levels[currentLevelIndex];
+
             milestones.forEach(m => {
                 if (!m.collected && m.x === playerPos.x && m.y === playerPos.y) {
                     m.collected = true;
@@ -356,11 +422,17 @@
                     if (score === milestones.length) {
                         levelCompleted = true;
                         startFireworks();
-                        modalTitleHeader.textContent = "🏆 ¡NIVEL COMPLETADO! 🏆";
-                        modalMessage.textContent = "Has reunido todas las frases perdidas del Arcano. ¡Se abre el camino hacia la siguiente dimensión!";
-                        modalActionHint.textContent = "PULSA [ ENTER ] PARA EL SIGUIENTE NIVEL";
+                        modalTitleHeader.textContent = `🏆 ¡NIVEL ${currentLevelIndex + 1} COMPLETADO! 🏆`;
+                        
+                        if (currentLevelIndex + 1 < levels.length) {
+                            modalMessage.textContent = "Has reunido todas las frases de este nivel. ¡Prepárate para un laberinto más complejo!";
+                            modalActionHint.textContent = "PULSA [ ENTER ] PARA EL SIGUIENTE NIVEL";
+                        } else {
+                            modalMessage.textContent = "¡Has superado todos los laberintos y descubierto todas las frases del Arcano!";
+                            modalActionHint.textContent = "PULSA [ ENTER ] PARA REINICIAR EL JUEGO";
+                        }
                     } else {
-                        modalTitleHeader.textContent = `✨ HITO DESCUBIERTO (${score}/10) ✨`;
+                        modalTitleHeader.textContent = `✨ HITO DESCUBIERTO (${score}/${milestones.length}) ✨`;
                         modalMessage.textContent = `"${m.text}"`;
                         modalActionHint.textContent = "Pulsa [ X ] o [ ESC ] para continuar";
                     }
@@ -371,7 +443,7 @@
             if (trapPos.x === playerPos.x && trapPos.y === playerPos.y) {
                 isGamePaused = true;
                 modalTitleHeader.textContent = "⚠️ ¡TRAMPA ACTIVADA! ⚠️";
-                modalMessage.textContent = "Una sombra errante te ha alcanzado. Regresas al punto de partida.";
+                modalMessage.textContent = "Una sombra errante te ha atrapado. Regresas al inicio del nivel.";
                 modalActionHint.textContent = "Pulsa [ X ] o [ ESC ] para reintentar";
                 modalOverlay.classList.add('active');
                 playerPos = { x: 1, y: 1 };
@@ -384,13 +456,16 @@
             isGamePaused = false;
 
             if (levelCompleted) {
-                // Aquí puedes redirigir al siguiente nivel o recargar para reiniciar
-                alert("¡Próximamente disponible el Siguiente Nivel!");
-                location.reload();
+                stopFireworks();
+                if (currentLevelIndex + 1 < levels.length) {
+                    loadLevel(currentLevelIndex + 1);
+                } else {
+                    loadLevel(0); // Vuelve al nivel 1 si termina todos
+                }
             }
         }
 
-        // Sistema de Fuegos Artificiales Clásico
+        // Sistema de Fuegos Artificiales
         let fireworksActive = false;
         let particles = [];
 
@@ -402,14 +477,19 @@
             animateFireworks();
         }
 
+        function stopFireworks() {
+            fireworksActive = false;
+            canvas.style.display = 'none';
+            particles = [];
+        }
+
         function createFirework(x, y) {
             const colors = ['#ffcc00', '#d6249f', '#00ffc8', '#ffffff', '#ff4444'];
             for (let i = 0; i < 50; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 6 + 2;
                 particles.push({
-                    x: x,
-                    y: y,
+                    x: x, y: y,
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed,
                     alpha: 1,
@@ -430,7 +510,7 @@
             particles.forEach((p, index) => {
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vy += 0.05; // gravedad
+                p.vy += 0.05;
                 p.alpha -= 0.015;
 
                 ctx.save();
@@ -439,29 +519,33 @@
                 ctx.fillRect(p.x, p.y, 4, 4);
                 ctx.restore();
 
-                if (p.alpha <= 0) {
-                    particles.splice(index, 1);
-                }
+                if (p.alpha <= 0) particles.splice(index, 1);
             });
 
             requestAnimationFrame(animateFireworks);
         }
 
-        // Movimiento de la trampa
-        setInterval(() => {
-            if (isGamePaused) return;
-            const moves = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
-            const randomMove = moves[Math.floor(Math.random() * moves.length)];
-            const tNewX = trapPos.x + randomMove.x;
-            const tNewY = trapPos.y + randomMove.y;
+        // Control dinámico de la trampa según la velocidad del nivel
+        function startTrapTimer() {
+            if (trapInterval) clearInterval(trapInterval);
+            const lvl = levels[currentLevelIndex];
 
-            if (tNewY >= 0 && tNewY < map.length && tNewX >= 0 && tNewX < map[0].length && map[tNewY][tNewX] === 0) {
-                trapPos.x = tNewX;
-                trapPos.y = tNewY;
-                renderMap();
-                checkCollisions();
-            }
-        }, 1200);
+            trapInterval = setInterval(() => {
+                if (isGamePaused) return;
+                const map = lvl.map;
+                const moves = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
+                const randomMove = moves[Math.floor(Math.random() * moves.length)];
+                const tNewX = trapPos.x + randomMove.x;
+                const tNewY = trapPos.y + randomMove.y;
+
+                if (tNewY >= 0 && tNewY < map.length && tNewX >= 0 && tNewX < map[0].length && map[tNewY][tNewX] === 0) {
+                    trapPos.x = tNewX;
+                    trapPos.y = tNewY;
+                    renderMap();
+                    checkCollisions();
+                }
+            }, lvl.trapSpeed);
+        }
 
         // Controles de teclado
         window.addEventListener('keydown', (e) => {
@@ -475,27 +559,17 @@
             }
 
             switch(e.key) {
-                case 'ArrowUp':
-                case 'w':
-                case 'W':
-                    movePlayer(0, -1); e.preventDefault(); break;
-                case 'ArrowDown':
-                case 's':
-                case 'S':
-                    movePlayer(0, 1); e.preventDefault(); break;
-                case 'ArrowLeft':
-                case 'a':
-                case 'A':
-                    movePlayer(-1, 0); e.preventDefault(); break;
-                case 'ArrowRight':
-                case 'd':
-                case 'D':
-                    movePlayer(1, 0); e.preventDefault(); break;
+                case 'ArrowUp': case 'w': case 'W': movePlayer(0, -1); e.preventDefault(); break;
+                case 'ArrowDown': case 's': case 'S': movePlayer(0, 1); e.preventDefault(); break;
+                case 'ArrowLeft': case 'a': case 'A': movePlayer(-1, 0); e.preventDefault(); break;
+                case 'ArrowRight': case 'd': case 'D': movePlayer(1, 0); e.preventDefault(); break;
             }
         });
 
         window.addEventListener('resize', updatePlayerPosition);
-        initGame();
+        
+        // Inicializar el juego en el Nivel 1
+        loadLevel(0);
     </script>
 </body>
 </html>
