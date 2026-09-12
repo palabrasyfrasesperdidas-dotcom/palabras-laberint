@@ -43,6 +43,13 @@
             margin-bottom: 12px;
         }
 
+        /* Contenedor principal del juego (oculto durante el prólogo) */
+        #game-wrapper {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
         #game-container {
             position: relative;
             width: 440px;
@@ -111,6 +118,59 @@
             filter: drop-shadow(0 0 6px #00ffc8);
         }
 
+        /* Pantalla de Prólogo / Narrativa */
+        #story-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #08080c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 20px;
+        }
+
+        .story-box {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            background: #12121a;
+            border: 4px solid #ffcc00;
+            border-radius: 10px;
+            padding: 40px 25px 30px 25px;
+            box-shadow: 0 0 40px rgba(255, 204, 0, 0.25), inset 0 0 20px rgba(0,0,0,0.8);
+            text-align: center;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        .story-title {
+            font-size: 0.75rem;
+            color: #ffcc00;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px #d6249f;
+        }
+
+        .story-text {
+            font-size: 0.65rem;
+            color: #e0e0e0;
+            line-height: 2;
+            margin-bottom: 30px;
+        }
+
+        .story-action-hint {
+            font-size: 0.55rem;
+            color: #00ffc8;
+            animation: blinkHint 1s infinite;
+        }
+
+        @keyframes blinkHint {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
         #fireworks-canvas {
             position: fixed;
             top: 0;
@@ -170,17 +230,6 @@
             margin-bottom: 20px;
         }
 
-        .modal-action-hint {
-            font-size: 0.55rem;
-            color: #00ffc8;
-            animation: blinkHint 1s infinite;
-        }
-
-        @keyframes blinkHint {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.3; }
-        }
-
         .close-btn {
             position: absolute;
             top: 8px;
@@ -204,38 +253,52 @@
             font-size: 0.7rem;
             color: #666;
             font-family: 'Press Start 2P', monospace;
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
-    <canvas id="fireworks-canvas"></canvas>
-
-    <h1>LABERINTO ARCADE</h1>
-    <div class="level-indicator">NIVEL <span id="current-level-num">1</span></div>
-    <div class="score-board">FRASES DESCUBIERTAS: <span id="score">0</span> / <span id="total-milestones">10</span></div>
-
-    <div id="game-container">
-        <div id="player">🧙‍♂️</div>
+    <!-- PANTALLA DE PRÓLOGO / NARRATIVA -->
+    <div id="story-screen">
+        <div class="story-box">
+            <div class="story-title">📖 EL DESTINO DEL ARCANO</div>
+            <div class="story-text">
+                El Arcano ha encontrado un libro en el que está escrito su destino, y ha emprendido un viaje en el que necesita encontrar las pistas para descubrir cuál es su verdadera senda.
+            </div>
+            <div class="story-action-hint">PULSA [ ENTER ] PARA ADENTRARTE EN EL LABERINTO</div>
+        </div>
     </div>
 
-    <div class="controls-hint">↑ ↓ ← → / WASD para mover</div>
+    <canvas id="fireworks-canvas"></canvas>
 
+    <!-- CONTENEDOR DEL JUEGO -->
+    <div id="game-wrapper">
+        <h1>LABERINTO ARCADE</h1>
+        <div class="level-indicator">NIVEL <span id="current-level-num">1</span></div>
+        <div class="score-board">FRASES DESCUBIERTAS: <span id="score">0</span> / <span id="total-milestones">10</span></div>
+
+        <div id="game-container">
+            <div id="player">🧙‍♂️</div>
+        </div>
+
+        <div class="controls-hint">↑ ↓ ← → / WASD para mover</div>
+    </div>
+
+    <!-- VENTANA MODAL DE FRASES -->
     <div id="modal-overlay">
         <div class="modal-box">
             <button class="close-btn" onclick="handleModalClose()">[ X ]</button>
             <div class="modal-title" id="modal-title-header">✨ HITO DESCUBIERTO ✨</div>
             <div class="modal-text" id="modal-message">Texto de la frase...</div>
-            <div class="modal-action-hint" id="modal-action-hint">Pulsa [ X ] o [ ESC ] para continuar</div>
+            <div class="story-action-hint" id="modal-action-hint">Pulsa [ X ] o [ ESC ] para continuar</div>
         </div>
     </div>
 
     <script>
-        // Configuración de los niveles (Mapas, Frases y Velocidad de trampa)
         const levels = [
             {
-                // NIVEL 1
-                trapSpeed: 1200, // más lento
+                trapSpeed: 1200,
                 map: [
                     [1,1,1,1,1,1,1,1,1,1,1],
                     [1,0,0,0,1,0,0,0,0,0,1],
@@ -267,8 +330,7 @@
                 ]
             },
             {
-                // NIVEL 2 (Más complejo y con trampa más rápida)
-                trapSpeed: 850, // más rápido
+                trapSpeed: 850,
                 map: [
                     [1,1,1,1,1,1,1,1,1,1,1],
                     [1,0,1,0,0,0,1,0,0,0,1],
@@ -304,8 +366,9 @@
         let currentLevelIndex = 0;
         let playerPos = { x: 1, y: 1 };
         let trapPos = { x: 9, y: 9 };
-        let isGamePaused = false;
+        let isGamePaused = true; // Empieza pausado hasta quitar la pantalla de historia
         let levelCompleted = false;
+        let gameStarted = false;
         let score = 0;
         let milestones = [];
         let trapInterval = null;
@@ -319,8 +382,17 @@
         const modalMessage = document.getElementById('modal-message');
         const modalTitleHeader = document.getElementById('modal-title-header');
         const modalActionHint = document.getElementById('modal-action-hint');
+        const storyScreen = document.getElementById('story-screen');
+        const gameWrapper = document.getElementById('game-wrapper');
         const canvas = document.getElementById('fireworks-canvas');
         const ctx = canvas.getContext('2d');
+
+        function startGame() {
+            storyScreen.style.display = 'none';
+            gameWrapper.style.display = 'flex';
+            gameStarted = true;
+            loadLevel(0);
+        }
 
         function loadLevel(index) {
             currentLevelIndex = index;
@@ -345,6 +417,7 @@
             renderMap();
             updatePlayerPosition();
             startTrapTimer();
+            isGamePaused = false;
         }
 
         function renderMap() {
@@ -391,7 +464,7 @@
         }
 
         function movePlayer(dx, dy) {
-            if (isGamePaused) return;
+            if (isGamePaused || !gameStarted) return;
 
             const lvl = levels[currentLevelIndex];
             const map = lvl.map;
@@ -409,8 +482,6 @@
         }
 
         function checkCollisions() {
-            const lvl = levels[currentLevelIndex];
-
             milestones.forEach(m => {
                 if (!m.collected && m.x === playerPos.x && m.y === playerPos.y) {
                     m.collected = true;
@@ -425,11 +496,11 @@
                         modalTitleHeader.textContent = `🏆 ¡NIVEL ${currentLevelIndex + 1} COMPLETADO! 🏆`;
                         
                         if (currentLevelIndex + 1 < levels.length) {
-                            modalMessage.textContent = "Has reunido todas las frases de este nivel. ¡Prepárate para un laberinto más complejo!";
+                            modalMessage.textContent = "Has reunido las pistas del destino en este nivel. ¡El laberinto se profundiza!";
                             modalActionHint.textContent = "PULSA [ ENTER ] PARA EL SIGUIENTE NIVEL";
                         } else {
-                            modalMessage.textContent = "¡Has superado todos los laberintos y descubierto todas las frases del Arcano!";
-                            modalActionHint.textContent = "PULSA [ ENTER ] PARA REINICIAR EL JUEGO";
+                            modalMessage.textContent = "¡Has descifrado todas las pistas del libro y encontrado el destino del Arcano!";
+                            modalActionHint.textContent = "PULSA [ ENTER ] PARA REINICIAR EL VIAJE";
                         }
                     } else {
                         modalTitleHeader.textContent = `✨ HITO DESCUBIERTO (${score}/${milestones.length}) ✨`;
@@ -443,7 +514,7 @@
             if (trapPos.x === playerPos.x && trapPos.y === playerPos.y) {
                 isGamePaused = true;
                 modalTitleHeader.textContent = "⚠️ ¡TRAMPA ACTIVADA! ⚠️";
-                modalMessage.textContent = "Una sombra errante te ha atrapado. Regresas al inicio del nivel.";
+                modalMessage.textContent = "Una sombra errante ha desviado tu camino. Regresas al inicio.";
                 modalActionHint.textContent = "Pulsa [ X ] o [ ESC ] para reintentar";
                 modalOverlay.classList.add('active');
                 playerPos = { x: 1, y: 1 };
@@ -460,12 +531,11 @@
                 if (currentLevelIndex + 1 < levels.length) {
                     loadLevel(currentLevelIndex + 1);
                 } else {
-                    loadLevel(0); // Vuelve al nivel 1 si termina todos
+                    loadLevel(0);
                 }
             }
         }
 
-        // Sistema de Fuegos Artificiales
         let fireworksActive = false;
         let particles = [];
 
@@ -525,13 +595,12 @@
             requestAnimationFrame(animateFireworks);
         }
 
-        // Control dinámico de la trampa según la velocidad del nivel
         function startTrapTimer() {
             if (trapInterval) clearInterval(trapInterval);
             const lvl = levels[currentLevelIndex];
 
             trapInterval = setInterval(() => {
-                if (isGamePaused) return;
+                if (isGamePaused || !gameStarted) return;
                 const map = lvl.map;
                 const moves = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
                 const randomMove = moves[Math.floor(Math.random() * moves.length)];
@@ -547,8 +616,14 @@
             }, lvl.trapSpeed);
         }
 
-        // Controles de teclado
         window.addEventListener('keydown', (e) => {
+            if (!gameStarted) {
+                if (e.key === 'Enter') {
+                    startGame();
+                }
+                return;
+            }
+
             if (isGamePaused) {
                 if (e.key === 'Enter') {
                     handleModalClose();
@@ -567,9 +642,6 @@
         });
 
         window.addEventListener('resize', updatePlayerPosition);
-        
-        // Inicializar el juego en el Nivel 1
-        loadLevel(0);
     </script>
 </body>
 </html>
