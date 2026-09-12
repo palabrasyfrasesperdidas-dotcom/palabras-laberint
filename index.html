@@ -1,129 +1,341 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Palabras y frases perdidas</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #0d0d0d;
-      color: #ffffff;
-      font-family: 'Georgia', serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palabras y frases perdidas | Laberinto Arcade</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #08080c;
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            padding: 10px;
+        }
 
-    .tarjeta-container {
-      position: relative;
-      width: 90%;
-      max-width: 420px;
-      aspect-ratio: 2 / 3;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-      background-size: cover;
-      background-position: center;
-    }
+        h1 {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.85rem;
+            color: #ffcc00;
+            text-shadow: 2px 2px #d6249f;
+            margin-bottom: 8px;
+            text-align: center;
+        }
 
-    /* �rea central donde va superpuesta la frase sobre la plantilla */
-    .contenido-frase {
-      position: absolute;
-      top: 32%;
-      left: 10%;
-      right: 10%;
-      bottom: 25%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 10px;
-    }
+        .score-board {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.7rem;
+            color: #00ffc8;
+            margin-bottom: 12px;
+        }
 
-    .texto-huella {
-      font-size: 1.25rem;
-      line-height: 1.5;
-      color: #f5f5f5;
-      font-style: italic;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.9);
-    }
+        /* Contenedor del Laberinto estilo Arcade */
+        #game-container {
+            position: relative;
+            width: 440px;
+            height: 440px;
+            background-color: #12121a;
+            border: 4px solid #ffcc00;
+            border-radius: 8px;
+            box-shadow: 0 0 25px rgba(214, 36, 159, 0.4), inset 0 0 15px rgba(0,0,0,0.8);
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            grid-template-rows: repeat(11, 1fr);
+            overflow: hidden;
+        }
 
-    .numero-huella {
-      margin-top: 15px;
-      font-size: 0.8rem;
-      letter-spacing: 2px;
-      color: #a3a3a3;
-      text-transform: uppercase;
-    }
+        /* Elementos de la cuadrícula */
+        .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
 
-    .boton-accion {
-      margin-top: 25px;
-      padding: 12px 28px;
-      background-color: transparent;
-      color: #d4af37;
-      border: 1px solid #d4af37;
-      border-radius: 25px;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      letter-spacing: 1px;
-    }
+        .wall {
+            background-color: #1e1e2f;
+            border: 1px solid #2a2a40;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+        }
 
-    .boton-accion:hover {
-      background-color: #d4af37;
-      color: #000;
-    }
-  </style>
+        .path {
+            background-color: #0d0d12;
+        }
+
+        /* Hitos (Frases) */
+        .milestone {
+            width: 12px;
+            height: 12px;
+            background-color: #ffcc00;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #ffcc00;
+            animation: pulseMilestone 1.5s infinite alternate;
+        }
+
+        @keyframes pulseMilestone {
+            0% { transform: scale(0.8); opacity: 0.7; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        /* Trampas (Fantasmas/Sombras) */
+        .trap {
+            font-size: 1.1rem;
+            animation: floatTrap 1s infinite alternate;
+        }
+
+        @keyframes floatTrap {
+            0% { transform: translateY(-2px); }
+            100% { transform: translateY(2px); }
+        }
+
+        /* El Arcano (Jugador) */
+        #player {
+            position: absolute;
+            width: calc(440px / 11);
+            height: calc(440px / 11);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            transition: top 0.12s linear, left 0.12s linear;
+            z-index: 10;
+            filter: drop-shadow(0 0 6px #00ffc8);
+        }
+
+        /* Caja de Diálogo / Frase flotante inferior */
+        #dialog-box {
+            margin-top: 15px;
+            width: 100%;
+            max-width: 440px;
+            min-height: 65px;
+            background: rgba(18, 18, 26, 0.95);
+            border: 2px solid #00ffc8;
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            color: #e0e0e0;
+            line-height: 1.5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0, 255, 200, 0.2);
+        }
+
+        .controls-hint {
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: #666;
+            font-family: 'Press Start 2P', monospace;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="tarjeta-container" id="tarjeta">
-    <div class="contenido-frase">
-      <div class="texto-huella" id="textoFrase">Cargando huella...</div>
-      <div class="numero-huella" id="numeroHuella"></div>
+    <h1>LABERINTO ARCADE</h1>
+    <div class="score-board">FRASES DESCUBIERTAS: <span id="score">0</span> / 10</div>
+
+    <div id="game-container">
+        <div id="player">🧙‍♂️</div>
     </div>
-  </div>
 
-  <button class="boton-accion" onclick="mostrarFraseAleatoria()">Descubrir otra huella</button>
+    <div id="dialog-box">
+        Usa las flechas del teclado o WASD para guiar al Arcano y descubrir los aforismos perdidos. ¡Cuidado con las sombras!
+    </div>
 
-  <script>
-    let todasLasFrases = [];
+    <div class="controls-hint">↑ ↓ ← → / WASD para mover</div>
 
-    // Mapeo de plantillas por bloque
-    const plantillasPorBloque = {
-      1: 'plantilla1.png'
-    };
+    <script>
+        // Definición del mapa (11x11): 1 = Pared, 0 = Camino libre
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1],
+            [1,0,1,0,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,0,1,0,0,0,1],
+            [1,1,1,0,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,1,0,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1]
+        ];
 
-    // Cargar frases desde el archivo JSON
-    fetch('frases.json')
-      .then(response => response.json())
-      .then(data => {
-        todasLasFrases = data;
-        mostrarFraseAleatoria();
-      })
-      .catch(error => console.error('Error al cargar las frases:', error));
+        // 10 Frases literarias asociadas a los hitos
+        const phrases = [
+            "El tiempo no borra las huellas; las convierte en misterio.",
+            "A veces, perderse es el único modo de encontrar el camino correcto.",
+            "Las palabras que callamos construyen laberintos invisibles.",
+            "En el fondo de la memoria, cada recuerdo arde como una pequeña hoguera.",
+            "Un libro abierto es un mapa hacia universos que aún no han nacido.",
+            "El eco de una frase antigua puede iluminar una noche entera.",
+            "Tras cada puerta cerrada por el miedo se oculta una verdad por descubrir.",
+            "Las sombras solo existen porque la luz se atreve a brillar.",
+            "Caminamos sobre fragmentos de historias que otros dejaron atrás.",
+            "El viaje del buscador nunca termina; solo cambia de pantalla."
+        ];
 
-    function mostrarFraseAleatoria() {
-      if (todasLasFrases.length === 0) return;
+        // Coordenadas iniciales del jugador y trampas
+        let playerPos = { x: 1, y: 1 };
+        let trapPos = { x: 9, y: 9 };
+        
+        // Posiciones de los 10 hitos (frases)
+        let milestones = [
+            { x: 9, y: 1, collected: false, text: phrases[0] },
+            { x: 9, y: 3, collected: false, text: phrases[1] },
+            { x: 5, y: 3, collected: false, text: phrases[2] },
+            { x: 1, y: 5, collected: false, text: phrases[3] },
+            { x: 9, y: 5, collected: false, text: phrases[4] },
+            { x: 3, y: 7, collected: false, text: phrases[5] },
+            { x: 5, y: 7, collected: false, text: phrases[6] },
+            { x: 1, y: 9, collected: false, text: phrases[7] },
+            { x: 5, y: 9, collected: false, text: phrases[8] },
+            { x: 9, y: 7, collected: false, text: phrases[9] }
+        ];
 
-      // Selecci�n aleatoria
-      const indice = Math.floor(Math.random() * todasLasFrases.length);
-      const seleccionada = todasLasFrases[indice];
+        let score = 0;
+        const container = document.getElementById('game-container');
+        const playerEl = document.getElementById('player');
+        const scoreEl = document.getElementById('score');
+        const dialogEl = document.getElementById('dialog-box');
 
-      // Aplicar plantilla de fondo seg�n el bloque
-      const tarjeta = document.getElementById('tarjeta');
-      const imagenFondo = plantillasPorBloque[seleccionada.bloque] || 'plantilla1.png';
-      tarjeta.style.backgroundImage = `url('${imagenFondo}')`;
+        function initGame() {
+            renderMap();
+            updatePlayerPosition();
+        }
 
-      // Mostrar texto y n�mero de huella
-      document.getElementById('textoFrase').innerText = `"${seleccionada.texto}"`;
-      document.getElementById('numeroHuella').innerText = `Huella ${seleccionada.id.toString().padStart(2, '0')}`;
-    }
-  </script>
+        function renderMap() {
+            // Limpiar celdas anteriores excepto el jugador
+            const cells = container.querySelectorAll('.cell');
+            cells.forEach(c => c.remove());
+
+            for (let y = 0; y < map.length; y++) {
+                for (let x = 0; x < map[y].length; x++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.style.gridColumn = x + 1;
+                    cell.style.gridRow = y + 1;
+
+                    if (map[y][x] === 1) {
+                        cell.classList.add('wall');
+                    } else {
+                        cell.classList.add('path');
+                        
+                        // Comprobar si hay hito
+                        const milestone = milestones.find(m => m.x === x && m.y === y && !m.collected);
+                        if (milestone) {
+                            const mEl = document.createElement('div');
+                            mEl.classList.add('milestone');
+                            cell.appendChild(mEl);
+                        }
+
+                        // Comprobar si está la trampa
+                        if (trapPos.x === x && trapPos.y === y) {
+                            const tEl = document.createElement('div');
+                            tEl.classList.add('trap');
+                            tEl.textContent = '👾';
+                            cell.appendChild(tEl);
+                        }
+                    }
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function updatePlayerPosition() {
+            const cellSize = container.clientWidth / 11;
+            playerEl.style.left = (playerPos.x * cellSize) + 'px';
+            playerEl.style.top = (playerPos.y * cellSize) + 'px';
+        }
+
+        function movePlayer(dx, dy) {
+            const newX = playerPos.x + dx;
+            const newY = playerPos.y + dy;
+
+            // Verificar límites y paredes
+            if (newY >= 0 && newY < map.length && newX >= 0 && newX < map[0].length) {
+                if (map[newY][newX] === 0) {
+                    playerPos.x = newX;
+                    playerPos.y = newY;
+                    updatePlayerPosition();
+                    checkCollisions();
+                }
+            }
+        }
+
+        function checkCollisions() {
+            // Comprobar hitos
+            milestones.forEach(m => {
+                if (!m.collected && m.x === playerPos.x && m.y === playerPos.y) {
+                    m.collected = true;
+                    score++;
+                    scoreEl.textContent = score;
+                    dialogEl.textContent = `"${m.text}"`;
+                    renderMap();
+
+                    if (score === milestones.length) {
+                        setTimeout(() => {
+                            dialogEl.textContent = "¡NIVEL COMPLETADO! Has reunido todas las frases perdidas del Arcano.";
+                        }, 300);
+                    }
+                }
+            });
+
+            // Comprobar colisión con la trampa
+            if (trapPos.x === playerPos.x && trapPos.y === playerPos.y) {
+                dialogEl.textContent = "¡Oh no! Una trampa te ha alcanzado. Reiniciando posición...";
+                playerPos = { x: 1, y: 1 };
+                updatePlayerPosition();
+            }
+        }
+
+        // Movimiento aleatorio sencillo para la trampa cada 1.2 segundos
+        setInterval(() => {
+            const moves = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
+            const randomMove = moves[Math.floor(Math.random() * moves.length)];
+            const tNewX = trapPos.x + randomMove.x;
+            const tNewY = trapPos.y + randomMove.y;
+
+            if (tNewY >= 0 && tNewY < map.length && tNewX >= 0 && tNewX < map[0].length && map[tNewY][tNewX] === 0) {
+                trapPos.x = tNewX;
+                trapPos.y = tNewY;
+                renderMap();
+                checkCollisions();
+            }
+        }, 1200);
+
+        // Controles de teclado
+        window.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    movePlayer(0, -1); e.preventDefault(); break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    movePlayer(0, 1); e.preventDefault(); break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    movePlayer(-1, 0); e.preventDefault(); break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    movePlayer(1, 0); e.preventDefault(); break;
+            }
+        });
+
+        window.addEventListener('resize', updatePlayerPosition);
+        initGame();
+    </script>
 </body>
 </html>
